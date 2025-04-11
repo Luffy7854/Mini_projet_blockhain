@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Système de Vote Électronique</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.1/dist/web3.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    .card {
+      margin-bottom: 20px;
+      border: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    .card-header {
+      background-color: #4e73df;
+      color: white;
+      font-weight: bold;
+    }
+    .btn-primary {
+      background-color: #4e73df;
+      border-color: #4e73df;
+    }
+    .btn-primary:hover {
+      background-color: #2e59d9;
+      border-color: #2e59d9;
+    }
+    .btn-success {
+      background-color: #1cc88a;
+      border-color: #1cc88a;
+    }
+    .btn-success:hover {
+      background-color: #13a56b;
+      border-color: #13a56b;
+    }
+    .btn-danger {
+      background-color: #e74a3b;
+      border-color: #e74a3b;
+    }
+    .btn-danger:hover {
+      background-color: #d52a1a;
+      border-color: #d52a1a;
+    }
+    .btn-warning {
+      background-color: #f6c23e;
+      border-color: #f6c23e;
+    }
+    .btn-warning:hover {
+      background-color: #f0b30c;
+      border-color: #f0b30c;
+    }
+    #status {
+      margin-bottom: 20px;
+    }
+    .role-badge {
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 14px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center mb-4">Système de Vote Électronique</h1>
+    
+    <div id="status" class="alert alert-info">
+      Veuillez vous connecter à MetaMask
+    </div>
+    
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">
+            Connexion
+          </div>
+          <div class="card-body">
+            <button id="connectBtn" class="btn btn-primary w-100">Connecter à MetaMask</button>
+            <div class="mt-3">
+              <p>Adresse connectée: <span id="userAddress">Non connecté</span></p>
+              <p>Rôle: <span id="userRole">Inconnu</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            Gestion des Participants
+          </div>
+          <div class="card-body">
+            <div class="input-group mb-3">
+              <input type="text" id="voterAddress" class="form-control" placeholder="Adresse du participant">
+              <button class="btn btn-success" id="addVoterBtn">Ajouter</button>
+              <button class="btn btn-danger" id="removeVoterBtn">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        Gestion des Résolutions
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-8">
+            <input type="text" id="resolutionTitle" class="form-control" placeholder="Titre de la résolution">
+          </div>
+          <div class="col-md-4">
+            <button id="addResolutionBtn" class="btn btn-primary w-100">Ajouter une résolution</button>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <h5>Résolutions existantes</h5>
+          <div id="resolutionsList" class="list-group">
+            <!-- Les résolutions seront ajoutées ici par JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        Voter pour une résolution
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="input-group mb-3">
+              <span class="input-group-text">Résolution ID</span>
+              <input type="number" id="voteResolutionId" class="form-control" min="1">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="input-group mb-3">
+              <span class="input-group-text">Vote</span>
+              <select id="voteOption" class="form-select">
+                <option value="0">POUR</option>
+                <option value="1">CONTRE</option>
+                <option value="2">NEUTRE</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button id="voteBtn" class="btn btn-success">Voter</button>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        Administration
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Clôturer une résolution</label>
+            <div class="input-group">
+              <input type="number" id="closeResolutionId" class="form-control" min="1" placeholder="ID de la résolution">
+              <button id="closeResolutionBtn" class="btn btn-warning">Clôturer</button>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label class="form-label">Mise à jour des rôles</label>
+            <div class="input-group mb-2">
+              <span class="input-group-text">Président</span>
+              <input type="text" id="presidentAddress" class="form-control" placeholder="Adresse du président">
+            </div>
+            <div class="input-group mb-2">
+              <span class="input-group-text">Scrutateur</span>
+              <input type="text" id="scrutateurAddress" class="form-control" placeholder="Adresse du scrutateur">
+            </div>
+            <button id="updateRolesBtn" class="btn btn-primary">Mettre à jour les rôles</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Adresse du contrat déployé
+    const contractAddress = "0x22968E02b4CEb5Fc90BeeDBaD384Ee1B847ea5cE";
+    
+    // ABI du contrat Election
+    const contractABI = [
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_president",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "_scrutateur",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "previousOwner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "_resolutionId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "_title",
+            "type": "string"
+          }
+        ],
+        "name": "ResolutionAdded",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "_president",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "_scrutateur",
+            "type": "address"
+          }
+        ],
+        "name": "RolesUpdated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "_resolutionId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "enum Election.VoteOption",
+            "name": "_voteOption",
+            "type": "uint8"
+          }
+        ],
+        "name": "VotedEvent",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "_voter",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "_status",
+            "type": "bool"
+          }
+        ],
+        "name": "WhiteListUpdated",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "string",
+            "name": "_title",
+            "type": "string"
+          }
+        ],
+        "name": "addResolution",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "_resolutionId",
+            "type": "uint256"
+          }
+        ],
+        "name": "closeResolution",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "_resolutionId",
+            "type": "uint256"
+          }
+        ],
+        "name": "getVoteCounts",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "pour",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "contre",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "neutre",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "hasVoted",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "president",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "resolutions",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "id",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "voteCountPour",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "voteCountContre",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "voteCountNeutre",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "resolutionsCount",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "scrutateur",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "secretaire",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_newSecretary",
+            "type": "address"
+          }
+        ],
+        "name": "transferSecretary",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_president",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "_scrutateur",
+            "type": "address"
+          }
+        ],
+        "name": "updateRoles",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_voter",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "_status",
+            "type": "bool"
+          }
+        ],
+        "name": "updateWhiteList",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "_resolutionId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum Election.VoteOption",
+            "name": "_voteOption",
+            "type": "uint8"
+          }
+        ],
+        "name": "vote",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "whiteList",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+
+    let web3;
+    let electionContract;
+    let userAccount;
+    
+    // Fonction pour se connecter à MetaMask
+    async function connectToMetaMask() {
+      if (window.ethereum) {
+        try {
+          // Demander la connexion aux comptes
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          userAccount = accounts[0];
+          
+          // Initialiser Web3
+          web3 = new Web3(window.ethereum);
+          
+          // Créer une instance du contrat
+          electionContract = new web3.eth.Contract(contractABI, contractAddress);
+          
+          // Mettre à jour l'interface
+          document.getElementById('userAddress').textContent = userAccount;
+          document.getElementById('status').className = "alert alert-success";
+          document.getElementById('status').textContent = "Connecté à MetaMask";
+          
+          // Déterminer le rôle de l'utilisateur
+          await determineUserRole();
+          
+          // Charger les informations du contrat
+          await loadContractInfo();
+          
+          // Écouter les changements de compte
+          window.ethereum.on('accountsChanged', function (accounts) {
+            window.location.reload();
+          });
+          
+        } catch (error) {
+          console.error("Erreur de connexion à MetaMask:", error);
+          document.getElementById('status').className = "alert alert-danger";
+          document.getElementById('status').textContent = "Erreur de connexion à MetaMask";
+        }
+      } else {
+        console.error("MetaMask n'est pas installé");
+        document.getElementById('status').className = "alert alert-warning";
+        document.getElementById('status').textContent = "MetaMask n'est pas installé. Veuillez l'installer pour utiliser cette application.";
+      }
+    }
+    
+    // Déterminer le rôle de l'utilisateur
+    async function determineUserRole() {
+      try {
+        const owner = await electionContract.methods.owner().call();
+        const president = await electionContract.methods.president().call();
+        const scrutateur = await electionContract.methods.scrutateur().call();
+        const secretaire = await electionContract.methods.secretaire().call();
+        const isWhiteListed = await electionContract.methods.whiteList(userAccount).call();
+        
+        let userRoleElement = document.getElementById('userRole');
+        userRoleElement.innerHTML = '';
+        
+        if (userAccount.toLowerCase() === owner.toLowerCase()) {
+          userRoleElement.innerHTML += '<span class="role-badge bg-danger text-white">Propriétaire</span>';
+        }
+        if (userAccount.toLowerCase() === president.toLowerCase()) {
+          userRoleElement.innerHTML += '<span class="role-badge bg-primary text-white">Président</span>';
+        }
+        if (userAccount.toLowerCase() === scrutateur.toLowerCase()) {
+          userRoleElement.innerHTML += '<span class="role-badge bg-warning text-dark">Scrutateur</span>';
+        }
+        if (userAccount.toLowerCase() === secretaire.toLowerCase()) {
+          userRoleElement.innerHTML += '<span class="role-badge bg-info text-white">Secrétaire</span>';
+        }
+        if (isWhiteListed) {
+          userRoleElement.innerHTML += '<span class="role-badge bg-success text-white">Liste Blanche</span>';
+        }
+        
+        if (userRoleElement.innerHTML === '') {
+          userRoleElement.innerHTML = 'Aucun rôle spécifique';
+        }
+        
+      } catch (error) {
+        console.error("Erreur lors de la détermination du rôle:", error);
+      }
+    }
+    
+    // Charger les informations du contrat
+    async function loadContractInfo() {
+      try {
+        // Récupérer le nombre de résolutions
+        const resolutionsCount = await electionContract.methods.resolutionsCount().call();
+        
+        // Vider la liste des résolutions
+        const resolutionsList = document.getElementById('resolutionsList');
+        resolutionsList.innerHTML = '';
+        
+        // Charger chaque résolution
+        for (let i = 1; i <= resolutionsCount; i++) {
+          const resolution = await electionContract.methods.resolutions(i).call();
+          const voteCounts = await electionContract.methods.getVoteCounts(i).call();
+          
+          const hasVoted = await electionContract.methods.hasVoted(i, userAccount).call();
+          
+          const resolutionItem = document.createElement('div');
+          resolutionItem.className = 'list-group-item';
+          
+          const statusBadge = resolution.isActive ? 
+                '<span class="badge bg-success float-end">Active</span>' : 
+                '<span class="badge bg-secondary float-end">Clôturée</span>';
+          
+          resolutionItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-1">Résolution #${resolution.id}: ${resolution.title}</h5>
+              ${statusBadge}
+            </div>
+            <p class="mb-1">
+              Votes: POUR (${voteCounts.pour}), CONTRE (${voteCounts.contre}), NEUTRE (${voteCounts.neutre})
+            </p>
+            <small>${hasVoted ? 'Vous avez déjà voté' : 'Vous n\'avez pas encore voté'}</small>
+          `;
+          
+          resolutionsList.appendChild(resolutionItem);
+        }
+        
+      } catch (error) {
+        console.error("Erreur lors du chargement des informations du contrat:", error);
+      }
+    }
+    
+    // Ajouter un participant à la liste blanche
+    async function addVoter() {
+      const voterAddress = document.getElementById('voterAddress').value;
+      
+      if (!web3.utils.isAddress(voterAddress)) {
+        alert("Adresse invalide");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.updateWhiteList(voterAddress, true).send({ from: userAccount });
+        alert("Participant ajouté à la liste blanche avec succès");
+      } catch (error) {
+        console.error("Erreur lors de l'ajout du participant:", error);
+        alert("Erreur lors de l'ajout du participant. Vérifiez que vous êtes le secrétaire.");
+      }
+    }
+    
+    // Supprimer un participant de la liste blanche
+    async function removeVoter() {
+      const voterAddress = document.getElementById('voterAddress').value;
+      
+      if (!web3.utils.isAddress(voterAddress)) {
+        alert("Adresse invalide");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.updateWhiteList(voterAddress, false).send({ from: userAccount });
+        alert("Participant retiré de la liste blanche avec succès");
+      } catch (error) {
+        console.error("Erreur lors de la suppression du participant:", error);
+        alert("Erreur lors de la suppression du participant. Vérifiez que vous êtes le secrétaire.");
+      }
+    }
+    
+    // Ajouter une résolution
+    async function addResolution() {
+      const title = document.getElementById('resolutionTitle').value;
+      
+      if (!title) {
+        alert("Veuillez saisir un titre pour la résolution");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.addResolution(title).send({ from: userAccount });
+        alert("Résolution ajoutée avec succès");
+        loadContractInfo(); // Recharger les résolutions
+      } catch (error) {
+        console.error("Erreur lors de l'ajout de la résolution:", error);
+        alert("Erreur lors de l'ajout de la résolution. Vérifiez que vous êtes le président.");
+      }
+    }
+    
+    // Voter pour une résolution
+    async function vote() {
+      const resolutionId = document.getElementById('voteResolutionId').value;
+      const voteOption = document.getElementById('voteOption').value;
+      
+      if (!resolutionId) {
+        alert("Veuillez saisir l'ID de la résolution");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.vote(resolutionId, voteOption).send({ from: userAccount });
+        alert("Vote enregistré avec succès");
+        loadContractInfo(); // Recharger les résolutions
+      } catch (error) {
+        console.error("Erreur lors du vote:", error);
+        alert("Erreur lors du vote. Vérifiez que vous êtes sur la liste blanche et que vous n'avez pas déjà voté pour cette résolution.");
+      }
+    }
+    
+    // Clôturer une résolution
+    async function closeResolution() {
+      const resolutionId = document.getElementById('closeResolutionId').value;
+      
+      if (!resolutionId) {
+        alert("Veuillez saisir l'ID de la résolution");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.closeResolution(resolutionId).send({ from: userAccount });
+        alert("Résolution clôturée avec succès");
+        loadContractInfo(); // Recharger les résolutions
+      } catch (error) {
+        console.error("Erreur lors de la clôture de la résolution:", error);
+        alert("Erreur lors de la clôture de la résolution. Vérifiez que vous êtes le scrutateur.");
+      }
+    }
+    
+    // Mettre à jour les rôles
+    async function updateRoles() {
+      const presidentAddress = document.getElementById('presidentAddress').value;
+      const scrutateurAddress = document.getElementById('scrutateurAddress').value;
+      
+      if (!web3.utils.isAddress(presidentAddress) || !web3.utils.isAddress(scrutateurAddress)) {
+        alert("Adresses invalides");
+        return;
+      }
+      
+      try {
+        await electionContract.methods.updateRoles(presidentAddress, scrutateurAddress).send({ from: userAccount });
+        alert("Rôles mis à jour avec succès");
+        determineUserRole(); // Mettre à jour l'affichage des rôles
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour des rôles:", error);
+        alert("Erreur lors de la mise à jour des rôles. Vérifiez que vous êtes le secrétaire.");
+      }
+    }
+    
+    // Attacher les événements aux boutons
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('connectBtn').addEventListener('click', connectToMetaMask);
+      document.getElementById('addVoterBtn').addEventListener('click', addVoter);
+      document.getElementById('removeVoterBtn').addEventListener('click', removeVoter);
+      document.getElementById('addResolutionBtn').addEventListener('click', addResolution);
+      document.getElementById('voteBtn').addEventListener('click', vote);
+      document.getElementById('closeResolutionBtn').addEventListener('click', closeResolution);
+      document.getElementById('updateRolesBtn').addEventListener('click', updateRoles);
+    });
+  </script>
+</body>
+</html>
